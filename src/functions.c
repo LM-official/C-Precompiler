@@ -1,14 +1,16 @@
-#include "funzioni.h"
+#include "functions.h"
 
-// ::::::::::::::::::::::::::::::::::::::: STATISTICHE :::::::::::::::::::::::::::::::::::::::::::::::
-/*  - numero di variabili controllate
-    - numero di errori rilevati
-    - per ogni errore rilevato, nome del file in cui e' stato rilevato e numero di riga nel file. 
-    - numero di righe di commento eliminate
-    - numero di file inclusi
-    - per il file di input la dimensione in byte ed il numero di righe (pre processamento)
-    - per ogni file incluso dimensione in byte e numero di righe (pre processamento)
-    - numero di righe e dimensione dell'output */
+// ::::::::::::::::::::::::::::::::::::::: STATISTICS :::::::::::::::::::::::::::::::::::::::::::::::
+/*  
+    - number of checked variables
+    - number of detected errors
+    - for each detected error, name of the file where it was detected and the line number in the file
+    - number of removed comment lines
+    - number of included files
+    - for the input file the size in bytes and the number of lines (pre-processing)
+    - for each included file size in bytes and number of lines (pre-processing)
+    - number of lines and size of the output
+*/
 
 Stats* initialize_stats(){
     Stats* sts = (Stats*) malloc(sizeof(Stats));
@@ -23,22 +25,24 @@ Mods* initialize_mod(int argc, char* args[]){
     *mds = (Mods) {NULL, NULL, 0};
 
     if(argc < 1 || !args) return mds;
-    
-    /*  -i, --in (notazione doppio trattino) per specificare il file di input
-        -o --out (notazione doppio trattino) per specificare il file di output
-        -v, --verbose (notazione doppio trattino) per produrre o meno come output le statistiche di elaborazione */
+
+    /*  
+        -i, --in (double-dash notation) to specify the input file
+        -o --out (double-dash notation) to specify the output file
+        -v, --verbose (double-dash notation) to produce or not the processing statistics as output
+    */
     for(unsigned short i = 1; i < argc; i++){
         char *arg = args[i];
-        
+
         if(is_equal(arg, "-v") || is_equal(arg, "--verbose")) mds->verbose = 1;
         else if(is_n_equal(arg, "--in=", 5)) mds->input = arg + 5;
         else if(is_n_equal(arg, "--out=", 6)) mds->output = arg + 6;
         else if(i < argc - 1 && is_equal(arg, "-i")) mds->input = args[++i];
-        else if(i < argc - 1 && is_equal(arg, "-o")) mds->output = args[++i]; 
+        else if(i < argc - 1 && is_equal(arg, "-o")) mds->output = args[++i];
         else{
             printf("Invalid option: %s\n", args[i]);
             exit(EXIT_FAILURE);
-        }   
+        }
     }
     return mds;
 }
@@ -65,43 +69,43 @@ void add_file(Stats *sts, File *f){
 void print_output(const char* dest, const char* res){
     if(dest){
         FILE* f = file_open_write(dest);
-        file_write(f, res); // se non ho risultato crea solo il file
+        file_write(f, res); // if there is no result it just creates the file
         file_close(f);
     }
-    else if(res) printf("%s", res); // stampa il risultato solo se non è NULL
+    else if(res) printf("%s", res); // prints the result only if it is not NULL
 }
 
 void print_statistics(Stats* sts, const char* result){
-    // stampo sempre le statistiche sullo stderr dato di default viene stampato lo stesso a schermo
+    // statistics are always printed to stderr since by default they are printed to screen anyway
     char *T = "├── ", *L = "└── ", *I = "│", *N = "";
     char *tree_brench, *tree_vert;
 
-    fprintf(stderr, "STATISTICHE:\n");
-    fprintf(stderr, "%d file inclusi:\n", sts->num_files);
+    fprintf(stderr, "STATISTICS:\n");
+    fprintf(stderr, "%d included files:\n", sts->num_files);
     for(int i = 0; i < sts->num_files; i++){
         File* f = sts->files[i];
-        
+
         tree_brench = i != sts->num_files - 1 ? T : L;
         tree_vert = i != sts->num_files - 1 ? I : N;
 
         fprintf(stderr, "\t%s", tree_brench);
         fprintf(stderr, "%s:\n", f->name);
         fprintf(stderr, "\t%s", tree_vert);
-        fprintf(stderr, "\t├── %u byte occupati\n", f->size);
+        fprintf(stderr, "\t├── %u bytes\n", f->size);
         fprintf(stderr, "\t%s", tree_vert);
-        fprintf(stderr, "\t├── %d righe mantenute\n", f->num_row);
+        fprintf(stderr, "\t├── %d lines kept\n", f->num_row);
         fprintf(stderr, "\t%s", tree_vert);
-        fprintf(stderr, "\t└── %d righe di commento eliminate\n", f->num_com);
+        fprintf(stderr, "\t└── %d comment lines removed\n", f->num_com);
     }
-        
+
     fprintf(stderr, "\nOutput: ");
-    if(!result) fprintf(stderr, "0 byte, 0 righe\n");
+    if(!result) fprintf(stderr, "0 bytes, 0 lines\n");
     else{
         int out_size = strlen(result), out_row = 0;
         for(int i = 0; i < out_size; i++) if(result[i] == '\n') out_row++;
-        fprintf(stderr, "%d byte, %d righe\n", out_size, out_row);
+        fprintf(stderr, "%d bytes, %d lines\n", out_size, out_row);
     }
-    
+
     int num_ok_tot = 0, num_err_tot = 0;
     for(int i = 0; i != sts->num_files; i++){
         File* f = sts->files[i];
@@ -111,68 +115,68 @@ void print_statistics(Stats* sts, const char* result){
             else num_err_tot++;
         }
     }
-    fprintf(stderr, "\n%d variabili controllate\n", num_ok_tot + num_err_tot);
-    
-    fprintf(stderr, "\n%d variabili corrette:\n", num_ok_tot);
+    fprintf(stderr, "\n%d variables checked\n", num_ok_tot + num_err_tot);
+
+    fprintf(stderr, "\n%d valid variables:\n", num_ok_tot);
     for(int i = 0; i < sts->num_files; i++){
-        File* f = sts->files[i]; // i-esimo file
+        File* f = sts->files[i]; // i-th file
 
         tree_brench = i != sts->num_files - 1 ? T : L;
         fprintf(stderr, "\t%s", tree_brench);
         fprintf(stderr, "%s:\n", f->name);
         int num_ok = 0;
         for(int j = 0; j < f->num_var; j++){
-            Var* v = f->vars[j]; // j-esima variabile dell'i-esimo file
+            Var* v = f->vars[j]; // j-th variable of the i-th file
             if(v->first_err == -1) num_ok++;
         }
         int c = 0;
         for(int j = 0; j < f->num_var; j++){
-            Var* v = f->vars[j]; // j-esima variabile dell'i-esimo file
-            if(v->first_err == -1){ // stampa le variabili giuste dell'i-esimo file incluso
+            Var* v = f->vars[j]; // j-th variable of the i-th file
+            if(v->first_err == -1){ // prints the valid variables of the i-th included file
                 c++;
                 tree_vert = i != sts->num_files - 1 ? I : N;
                 fprintf(stderr, "\t%s", tree_vert);
                 tree_brench = c < num_ok ? T : L;
                 fprintf(stderr, "\t%s", tree_brench);
-                fprintf(stderr, "riga %d, %s\n", v->row, v->name);
+                fprintf(stderr, "line %d, %s\n", v->row, v->name);
             }
         }
     }
 
-    fprintf(stderr, "\n%d errori rilevati:\n", num_err_tot);
+    fprintf(stderr, "\n%d errors detected:\n", num_err_tot);
     for(int i = 0; i < sts->num_files; i++){
         File* f = sts->files[i];
 
         tree_brench = i != sts->num_files - 1 ? T : L;
         fprintf(stderr, "\t%s", tree_brench);
         fprintf(stderr, "%s:\n", f->name);
-        
+
         int num_err = 0;
         for(int j = 0; j < f->num_var; j++){
-            Var* v = f->vars[j]; // j-esima variabile dell'i-esimo file
+            Var* v = f->vars[j]; // j-th variable of the i-th file
             if(v->first_err != -1) num_err++;
         }
 
         int c = 0;
         for(int j = 0; j < f->num_var; j++){
-            Var* v = f->vars[j]; // j-esima variabile dell'i-esimo file
-            
-            if(v->first_err != -1){ // stampa le variabili giuste dell'i-esimo file incluso
+            Var* v = f->vars[j]; // j-th variable of the i-th file
+
+            if(v->first_err != -1){ // prints the valid variables of the i-th included file
                 c++;
                 tree_vert = i != sts->num_files - 1 ? I : N;
                 fprintf(stderr, "\t%s", tree_vert);
                 tree_brench = c < num_err ? T : L;
                 fprintf(stderr, "\t%s", tree_brench);
-                fprintf(stderr, "riga %d, %s\n", v->row, v->name);
+                fprintf(stderr, "line %d, %s\n", v->row, v->name);
 
-                // freccina
+                // arrow
                 tree_vert = i != sts->num_files - 1 ? I : N;
                 fprintf(stderr, "\t%s", tree_vert);
                 tree_vert = c < num_err ? I : N;
                 fprintf(stderr, "\t%s\t ", tree_vert);
                 int d_row = num_digits(v->row);
                 for(int _ = 0; _ != d_row; _++) fprintf(stderr, " "); //%d
-                fprintf(stderr, "  "); //, 
+                fprintf(stderr, "  "); //,
                 for(int _ = 0; _ != v->first_err; _++) fprintf(stderr, " "); // %s
                 fprintf(stderr, "^");
                 int len_var = strlen(v->name) - 1;
@@ -184,7 +188,7 @@ void print_statistics(Stats* sts, const char* result){
 }
 
 
-// ::::::::::::::::::::::::::::::::::::::: ERRORI :::::::::::::::::::::::::::::::::::::::::::::::
+// ::::::::::::::::::::::::::::::::::::::: ERRORS :::::::::::::::::::::::::::::::::::::::::::::::
 void errors(){
     if(errno != 0){
         perror("");
@@ -202,7 +206,7 @@ void file_errors(FILE *f){
 }
 
 
-// ::::::::::::::::::::::::::::::::::::::: UTILITA' :::::::::::::::::::::::::::::::::::::::::::::::
+// ::::::::::::::::::::::::::::::::::::::: UTILITIES :::::::::::::::::::::::::::::::::::::::::::::::
 unsigned num_digits(int n){
     unsigned count = 0;
     n = abs(n);
@@ -211,24 +215,24 @@ unsigned num_digits(int n){
 }
 
 inline int is_equal(const char *str1, const char *str2){
-    if(!str1 || !str2) return 0; // se uno dei 2 argomenti è null strcmp da un errore di segmentazione
+    if(!str1 || !str2) return 0; // if one of the 2 arguments is null strcmp causes a segmentation fault
     return strcmp(str1, str2) == 0;
 }
 
 inline int is_n_equal(const char *str1, const char *str2, int n){
-    if(!str1 || !str2) return 0; // se uno dei 2 argomenti è null strcmp da un errore di segmentazione
+    if(!str1 || !str2) return 0; // if one of the 2 arguments is null strcmp causes a segmentation fault
     return strncmp(str1, str2, n) == 0;
 }
 
 void strstrip(char **string){
     if(!(*string)){
-        *string = (char*) malloc(1 * sizeof(char)); // inizializzato di default \0
+        *string = (char*) malloc(1 * sizeof(char)); // default-initialized to \0
         errors();
         return;
     }
-    unsigned len = strlen(*string); // va fatto qui altrimenti è inconsistente
+    unsigned len = strlen(*string); // must be done here otherwise it is inconsistent
     if(len == 0) return;
-    
+
     int start = 0, end = len - 1;
     while(end >= start && isspace((*string)[end])) end--;
     while(start <= end && (isspace((*string)[start]) || (*string)[start] == '*' || (*string)[start] == '&')) start++;
@@ -239,7 +243,7 @@ void strstrip(char **string){
         *string = '\0';
         return;
     }
-    
+
     unsigned read = end - start + 1;
     char *out = (char*) malloc((read + 1) * sizeof(char));
     errors();
@@ -263,8 +267,8 @@ void file_compacter(char **text){
         if(empty && (cur != '\0' && !isspace(cur))) empty = 0;
         else if(cur == '\n' || cur == '\0'){
             if(!empty){
-                unsigned read = (i - start) + 1; // numero di caratteri della riga
-                memcpy(out + j, (*text) + start, read * sizeof(char)); // appende a out i caratteri della riga
+                unsigned read = (i - start) + 1; // number of characters of the line
+                memcpy(out + j, (*text) + start, read * sizeof(char)); // appends the line characters to out
                 j += read;
                 empty = 1;
             }
@@ -277,7 +281,7 @@ void file_compacter(char **text){
 }
 
 
-// ::::::::::::::::::::::::::::::::::::::: BASE FILE :::::::::::::::::::::::::::::::::::::::::::::::
+// ::::::::::::::::::::::::::::::::::::::: BASIC FILE :::::::::::::::::::::::::::::::::::::::::::::::
 FILE* file_open_read(const char *path){
     if(!path) return NULL;
 
@@ -290,9 +294,9 @@ unsigned file_size(FILE* f){
     if(!f) return 0;
 
     fseek(f, 0, SEEK_END);
-    unsigned size = ftell(f); // sposta il puntatore all'ultimo carattere del file
+    unsigned size = ftell(f); // moves the pointer to the last character of the file
     file_errors(f);
-    rewind(f); // sposta il puntatore al primo carattere del file
+    rewind(f); // moves the pointer to the first character of the file
     return size;
 }
 
@@ -333,7 +337,7 @@ void file_close(FILE *f){
 }
 
 
-// ::::::::::::::::::::::::::::::::::::::: FILE AVANZATI ::::::::::::::::::::::::::::::::::::::::::::
+// ::::::::::::::::::::::::::::::::::::::: ADVANCED FILE ::::::::::::::::::::::::::::::::::::::::::::
 unsigned file_del_comments(char** text, int verbose){
     if(!text || !(*text)) return 0;
 
@@ -346,7 +350,7 @@ unsigned file_del_comments(char** text, int verbose){
     while(i < len){
         char cur = (*text)[i], nxt = (*text)[i+1];
 
-        // salta le righe di commenti
+        // skips comment lines
         if(!skip1 && cur == '/' && nxt == '/'){
             skip1 = 1;
             i++;
@@ -355,8 +359,8 @@ unsigned file_del_comments(char** text, int verbose){
             skip2 = 1;
             i++;
         }
-        
-        // smette di saltare
+
+        // stops skipping
         else if(skip1 && (cur == '\n' || cur == '\0')){
             skip1 = 0;
             if(verbose) num_com++;
@@ -373,7 +377,7 @@ unsigned file_del_comments(char** text, int verbose){
                 out[j++] = cur;
             }
         }
-        
+
         else if(!skip1 && !skip2) out[j++] = cur;
 
         i++;
@@ -387,10 +391,24 @@ unsigned file_del_comments(char** text, int verbose){
 int is_already_included(Stats *sts, const char *name){
     if(!name) return 0;
 
-    for(int i = 0; i < sts->num_files; i++) 
+    for(int i = 0; i < sts->num_files; i++)
         if(is_equal(name, sts->files[i]->name)) return 1;
 
     return 0;
+}
+
+// resolves an included file name relative to the directory of the including file,
+// so a quoted include is found next to its parent rather than in the current working dir
+char* resolve_path(const char* parent, const char* name){
+    const char* slash = strrchr(parent, '/');
+    if(!slash) return strdup(name); // parent lives in the cwd: keep the name as-is
+
+    unsigned dir_len = (slash - parent) + 1; // up to and including the '/'
+    char* out = (char*) malloc(dir_len + strlen(name) + 1);
+    errors();
+    memcpy(out, parent, dir_len);
+    strcpy(out + dir_len, name);
+    return out;
 }
 
 char* file_include(Stats* sts, const char* path, int verbose){
@@ -400,49 +418,54 @@ char* file_include(Stats* sts, const char* path, int verbose){
 
     FILE* file = file_open_read(path);
     char* text = file_text(file);
-    unsigned size = file_size(file); // dimensione del file in byte
+    unsigned size = file_size(file); // file size in bytes
     file_close(file);
 
     f->name = strdup(path);
     f->size = size;
-    f->num_com = file_del_comments(&text, verbose); // eliminiamo i commenti in ogni file e assegno il conteggio al file corrente
-    f->num_row = verbose ? check_file(f, text) : 0; // controlla le variabili del file
+    f->num_com = file_del_comments(&text, verbose); // remove comments in each file and assign the count to the current file
+    f->num_row = verbose ? check_file(f, text) : 0; // check the file variables
     add_file(sts, f);
 
-    unsigned len = size / sizeof(char); // numero di caratteri del file
-    char* out = (char*) malloc(len + 1); // per lo \0 incluso
+    unsigned len = size / sizeof(char); // number of characters of the file
+    char* out = (char*) malloc(len + 1); // including the \0
     errors();
-    
+
     const char include[] = "#include";
-    unsigned start = 0, i = 0, k = 0, len_include = sizeof(include) - 1; // non considero lo \0
+    unsigned start = 0, i = 0, k = 0, len_include = sizeof(include) - 1; // don't count the \0
     while(i < len){
         if((i + len_include) >= len || !is_n_equal(text + i, include, len_include)){
             out[k++] = text[i++];
             continue;
         }
-        
-        // se trova "#include", i = indice di '#'
+
+        // if it finds "#include", i = index of '#'
         start = i;
-        i += len_include; // salta #include
-        while(i < len && text[i] == ' ') i++; // salta spazi
-        if(text[i++] != '\"'){ // salta gli include delle librerie standard
+        i += len_include; // skip #include
+        while(i < len && text[i] == ' ') i++; // skip spaces
+        if(text[i++] != '\"'){ // skip the standard library includes
             memcpy(out + k, text + start, i - start);
             k += i - start;
-            continue; 
+            continue;
         }
-        
-        // trova un include valido
-        char name[255]; // dimensione massima nome di un file in Linux
-        unsigned j = 0;
-        while(i < len && text[i] != '\"') name[j++] = text[i++]; // legge il nome fino a "
-        name[j] = '\0';
-        i++; // salta le "
-        
-        if(is_already_included(sts, name)) continue; // salto se ho già incluso il file
 
-        // vado in ricorsione sui file da includere che mi ritornano il loro testo, da aggiungere al padre
-        char *child_text = file_include(sts, name, verbose);
-        if(child_text){ // se ho del testo lo aggiungo alla stringa
+        // finds a valid include
+        char name[255]; // max file name length in Linux
+        unsigned j = 0;
+        while(i < len && text[i] != '\"') name[j++] = text[i++]; // reads the name up to "
+        name[j] = '\0';
+        i++; // skip the "
+
+        char* full = resolve_path(path, name); // resolve relative to the including file
+        if(is_already_included(sts, full)){ // skip if I already included the file
+            free(full);
+            continue;
+        }
+
+        // recurse on the files to include which return their text, to add to the parent
+        char *child_text = file_include(sts, full, verbose);
+        free(full);
+        if(child_text){ // if I have text I add it to the string
             unsigned new_size = strlen(child_text);
             out = (char*)realloc(out, len + new_size + 1);
             errors();
@@ -457,7 +480,7 @@ char* file_include(Stats* sts, const char* path, int verbose){
 }
 
 
-// ::::::::::::::::::::::::::::::::::::::: CHECK VARIABILI ::::::::::::::::::::::::::::::::::::::::::
+// ::::::::::::::::::::::::::::::::::::::: VARIABLE CHECKING ::::::::::::::::::::::::::::::::::::::::
 const char* types[] = {"int", "void", "long", "char", "short", "float", "double", "signed", "unsigned"};
 const char* keywords[] = {
     "do", "if", "for", "auto", "case", "else", "goto", "break", "const", "while",
@@ -468,15 +491,15 @@ const unsigned len_types = sizeof(types) / sizeof(types[0]), len_keys = sizeof(k
 
 char* get_instruction(const char *text, int *index){
     if(!text || !index) return NULL;
-    
+
     int start = (*index), len = strlen(text);
-    while((*index) < len && text[*index] != ';') (*index)++; // scorre fino a ; o fine file
+    while((*index) < len && text[*index] != ';') (*index)++; // scans up to ; or end of file
     // if(text[*index] == '\0') return NULL;
 
     int read = ++(*index) - start;
     if(read == 0) return NULL;
-    
-    // copia i caratteri letti
+
+    // copies the read characters
     char* out = strndup(text + start, read);
     errors();
     return out;
@@ -485,18 +508,18 @@ char* get_instruction(const char *text, int *index){
 char* get_word(const char* text, int* index, int* row){
     if(!text) return NULL;
     if(!index) *index = 0;
-    
+
     int len = strlen(text);
     while((*index) < len && !islower(text[*index])){
         if(text[(*index)] == '\n') (*row)++;
-        (*index)++; // salta fino al primo carattere minuscolo
+        (*index)++; // skip up to the first lowercase character
     }
     int start = (*index);
-    while((*index) < len && islower(text[*index])) (*index)++; // scorre finchè trova caratteri minuscoli
+    while((*index) < len && islower(text[*index])) (*index)++; // scans while it finds lowercase characters
     int read = (*index) - start;
     if(read == 0) return NULL;
-    
-    // copia i caratteri letti
+
+    // copies the read characters
     char* out = strndup(text + start, read);
     errors();
     return out;
@@ -508,26 +531,26 @@ int is_cast(const char *instr, int index, int len){
     unsigned int start = (index - len) - 1, end = index;
 
     index = start;
-    while(index >= 0 && isspace(instr[index])) index--; // mi sposto a sinistra
-    if(instr[start] != '(') return 0; // se non ho nessuna parentesi a sx del tipo allora non è un cast
+    while(index >= 0 && isspace(instr[index])) index--; // move to the left
+    if(instr[start] != '(') return 0; // if there is no parenthesis to the left of the type then it is not a cast
 
     index = end;
-    while(isspace(instr[index])) index++; // mi sposto a destra
-    if(instr[index] != ')') return 0; // se non ho nessuna parentesi a dx del tipo allora non è un cast
-    
+    while(isspace(instr[index])) index++; // move to the right
+    if(instr[index] != ')') return 0; // if there is no parenthesis to the right of the type then it is not a cast
+
     return 1;
 }
 
 int index_type(const char* instr, int* row){
     if(!instr) return -1;
-    
+
     int len = strlen(instr), i = 0;
     int last = -1;
     char* word;
-    while((word = get_word(instr, &i, row))){ // un'istruzione può non iniziare con un tipo, ma una volta iniziata una lista di tipi basta 1 parola non tipo per interrompere
-        for(int j = 0; types[j]; j++){ // controllo tipo
+    while((word = get_word(instr, &i, row))){ // an instruction may not start with a type, but once a type list has started a single non-type word is enough to interrupt it
+        for(int j = 0; types[j]; j++){ // type check
             if(is_equal(word, types[j])){
-                if(!is_cast(instr, i, strlen(word))) last = i; // se il tipo non è un cast allora aggiorno last
+                if(!is_cast(instr, i, strlen(word))) last = i; // if the type is not a cast then update last
                 break;
             }
         }
@@ -541,7 +564,7 @@ List_var* get_variables(const char* instr, int* row){
     *l_vars = (List_var) {NULL, 0};
 
     if(!instr) return l_vars;
-    
+
     int i = index_type(instr, row);
     if(i == -1) return l_vars;
 
@@ -550,7 +573,7 @@ List_var* get_variables(const char* instr, int* row){
     while(i < len){
         if(instr[i] == '\n') (*row)++;
 
-        else if(!skip && (instr[i] == ',' || instr[i] == '=' || instr[i] == ';')){ // prende una variabile
+        else if(!skip && (instr[i] == ',' || instr[i] == '=' || instr[i] == ';')){ // takes a variable
             char* str_var = strndup(instr + start, i - start);
             errors();
             strstrip(&str_var);
@@ -565,13 +588,13 @@ List_var* get_variables(const char* instr, int* row){
             free(str_var);
             start = i + 1;
         }
-        
+
         if(instr[i] == '=') skip = 1;
         else if(instr[i] == ','){
             skip = 0;
             start = i + 1;
         }
-        
+
         i++;
     }
     return l_vars;
@@ -579,38 +602,40 @@ List_var* get_variables(const char* instr, int* row){
 
 int is_keyword(const char* word){
     if(!word) return 0;
-    for(int i = 0; i < len_keys; i++) 
+    for(int i = 0; i < len_keys; i++)
         if(is_equal(word, keywords[i])) return 1;
     return 0;
 }
 
 int check_variable(const char *name){
-    /* - Il primo carattere in un identificatore deve essere una lettera o underscore ( _ ) e può essere seguito solo da qualsiasi lettera, numero o underscore;
-       - Gli identificatori fanno distinzione tra maiuscole e minuscole;
-       - Le virgole o gli spazi vuoti non sono consentiti all'interno di un identificatore;
-       - Le parole chiave non possono essere utilizzate come identificatore;
-       - Gli identificatori non devono avere una lunghezza superiore a 31 caratteri (facendo dei test invece sembra di si); */
-    if(!name) return 0; // non ha nome
-    
-    int len_var = strlen(name);
-    if(!isalpha(name[0]) && name[0] != '_' || len_var > 31 || is_keyword(name)) return 0; // errore all'inizio di nome
-    for(int i = 1; i < len_var; i++) // prima lettera già controllata
-        if(!isalnum(name[i]) && name[i] != '_') return i; // caratteri non ammessi all'interno del nome
+    /*
+        - The first character in an identifier must be a letter or underscore ( _ ) and can be followed only by any letter, number or underscore;
+        - Identifiers are case-sensitive;
+        - Commas or whitespace are not allowed inside an identifier;
+        - Keywords cannot be used as an identifier;
+        - Identifiers must not be longer than 31 characters (doing some tests it actually seems they can);
+    */
+    if(!name) return 0; // has no name
 
-    return -1; // variabile giusta
+    int len_var = strlen(name);
+    if(!isalpha(name[0]) && name[0] != '_' || len_var > 31 || is_keyword(name)) return 0; // error at the start of the name
+    for(int i = 1; i < len_var; i++) // first letter already checked
+        if(!isalnum(name[i]) && name[i] != '_') return i; // characters not allowed inside the name
+
+    return -1; // valid variable
 }
 
 int check_file(File* f, const char* file_text){
     if(!f || !file_text) return 0;
 
-    int i = 0, len = strlen(file_text), row = 1 ; // righe controllate
+    int i = 0, len = strlen(file_text), row = 1 ; // checked rows
     while(i < len){
         char* instr = get_instruction(file_text, &i);
         if(!instr) continue;
-        
+
         List_var* l_vars = get_variables(instr, &row);
         free(instr);
-        
+
         if(!l_vars->vars) continue;
 
         for(int j = 0; j < l_vars->len; j++){
