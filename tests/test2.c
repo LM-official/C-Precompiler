@@ -1,10 +1,10 @@
 #include <test2.h>
-// programma di esempio aritmetica dei puntatori
+// example program pointer arithmetic
 int main() {
 
 	int n=5;
 	int *nptr, *nptr^1, *nptr^2;
-	int &addrcopy=&n;// sara' corretto???
+	int &addrcopy=&n;// will it be correct???
 	nptr = &n;
 
 	nptr^1 = nptr+1;
@@ -13,7 +13,7 @@ int main() {
 
 	printf(" nptr = %p\n nptr1 = %p\n nptr2 = %p \n", nptr, nptr1, nptr2);
 
-/* As es:
+/* E.g.:
  nptr  = 0x7fff829e3644 + 0x4 = 0x7fff829e3648
  nptr1 = 0x7fff829e3648 
  nptr  = 0x7fff829e3644 + 0xc
